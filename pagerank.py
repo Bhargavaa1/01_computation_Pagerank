@@ -138,6 +138,10 @@ class WebGraph():
             x = xprev.detach().clone()
             for i in range(max_iterations):
                 xprev = x.detach().clone()
+                xprevTranspose = transpose(xprev, 0, 1)
+                alphaXPrevTranspose = mul(xprevTranspose, alpha)
+                
+
 
                 # compute the new x vector using Eq (5.1)
                 # FIXME: Task 1

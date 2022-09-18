@@ -31,9 +31,9 @@ class WebGraph():
 
         # loop through filename to extract the indices
         logging.debug('computing indices')
-        with gzip.open(filename,newline='',mode='rt') as f:
-            for i,row in enumerate(csv.DictReader(f)):
-                if max_nnz is not None and i>max_nnz:
+        with gzip.open(filename, newline='', mode='rt') as f:
+            for i, row in enumerate(csv.DictReader(f)):
+                if max_nnz is not None and i > max_nnz:
                     break
                 import re
                 regex = re.compile(r'.*((/$)|(/.*/)).*')
@@ -42,14 +42,14 @@ class WebGraph():
                 source = self._url_to_index(row['source'])
                 target = self._url_to_index(row['target'])
                 target_counts[target] += 1
-                indices.append([source,target])
+                indices.append([source, target])
 
         # remove urls with too many in-links
         if filter_ratio is not None:
             new_indices = []
-            for source,target in indices:
+            for source, target in indices:
                 if target_counts[target] < filter_ratio*len(self.url_dict):
-                    new_indices.append([source,target])
+                    new_indices.append([source, target])
             indices = new_indices
 
         # compute the values that correspond to the indices variable
@@ -57,8 +57,8 @@ class WebGraph():
         values = []
         last_source = indices[0][0]
         last_i = 0
-        for i,(source,target) in enumerate(indices+[(None,None)]):
-            if source==last_source:
+        for i, (source, target) in enumerate(indices+[(None, None)]):
+            if source == last_source:
                 pass
             else:
                 total_links = i-last_i
@@ -70,9 +70,8 @@ class WebGraph():
         i = torch.LongTensor(indices).t()
         v = torch.FloatTensor(values)
         n = len(self.url_dict)
-        self.P = torch.sparse.FloatTensor(i, v, torch.Size([n,n]))
+        self.P = torch.sparse.FloatTensor(i, v, torch.Size([n, n]))
         self.index_dict = {v: k for k, v in self.url_dict.items()}
-    
 
     def _url_to_index(self, url):
         '''
@@ -82,13 +81,11 @@ class WebGraph():
             self.url_dict[url] = len(self.url_dict)
         return self.url_dict[url]
 
-
     def _index_to_url(self, index):
         '''
         given a row/col index into the self.P matrix, returns the corresponding url
         '''
         return self.index_dict[index]
-
 
     def make_personalization_vector(self, query=None):
         '''
@@ -111,11 +108,10 @@ class WebGraph():
 
         # normalizing v
         v_sum = torch.sum(v)
-        assert(v_sum>0)
+        assert (v_sum > 0)
         v /= v_sum
-        
-        return v
 
+        return v
 
     def power_method(self, v=None, x0=None, alpha=0.85, max_iterations=1000, epsilon=1e-6):
         '''
@@ -129,12 +125,12 @@ class WebGraph():
             # create variables if none given
             if v is None:
                 v = torch.Tensor([1/n]*n)
-                v = torch.unsqueeze(v,1)
+                v = torch.unsqueeze(v, 1)
             v /= torch.norm(v)
 
             if x0 is None:
                 x0 = torch.Tensor([1/(math.sqrt(n))]*n)
-                x0 = torch.unsqueeze(x0,1)
+                x0 = torch.unsqueeze(x0, 1)
             x0 /= torch.norm(x0)
 
             # implementing the $a$ vector
@@ -149,15 +145,17 @@ class WebGraph():
             for i in range(max_iterations):
                 # x^(k-1) vector processing
                 xprev = x.detach().clone()
-                
+
                 # first part of the sum
-                firstTerm = torch.mul(alpha, torch.transpose(torch.matmul(torch.transpose(self.P,0,1),xprev),0,1))
+                firstTerm = torch.mul(alpha, torch.transpose(
+                    torch.matmul(torch.transpose(self.P, 0, 1), xprev), 0, 1))
 
                 # second part of the sum
-                secondTerm = torch.mul(torch.add(torch.mul(alpha,torch.matmul(torch.transpose(xprev,0,1), a)),(1-alpha)),v.t())
+                secondTerm = torch.mul(torch.add(torch.mul(alpha, torch.matmul(
+                    torch.transpose(xprev, 0, 1), a)), (1-alpha)), v.t())
 
                 # next iteration of x
-                x = torch.transpose(torch.add(firstTerm,secondTerm),0,1)
+                x = torch.transpose(torch.add(firstTerm, secondTerm), 0, 1)
 
                 # output debug information
                 residual = torch.norm(x-xprev)
@@ -168,14 +166,13 @@ class WebGraph():
                     break
             return x.squeeze()
 
-
     def search(self, pi, query='', max_results=10):
         '''
         Logs all urls that match the query.
         Results are displayed in sorted order according to the pagerank vector pi.
         '''
         n = self.P.shape[0]
-        vals,indices = torch.topk(pi,n)
+        vals, indices = torch.topk(pi, n)
 
         matches = 0
         for i in range(n):
@@ -184,8 +181,9 @@ class WebGraph():
             index = indices[i].item()
             url = self._index_to_url(index)
             pagerank = vals[i].item()
-            if url_satisfies_query(url,query):
-                logging.info(f'rank={matches} pagerank={pagerank:0.4e} url={url}')
+            if url_satisfies_query(url, query):
+                logging.info(
+                    f'rank={matches} pagerank={pagerank:0.4e} url={url}')
                 matches += 1
 
 
@@ -216,14 +214,14 @@ def url_satisfies_query(url, query):
     satisfies = False
     terms = query.split()
 
-    num_terms=0
+    num_terms = 0
     for term in terms:
         if term[0] != '-':
-            num_terms+=1
+            num_terms += 1
             if term in url:
                 satisfies = True
-    if num_terms==0:
-        satisfies=True
+    if num_terms == 0:
+        satisfies = True
 
     for term in terms:
         if term[0] == '-':
@@ -232,7 +230,7 @@ def url_satisfies_query(url, query):
     return satisfies
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', required=True)
@@ -253,5 +251,6 @@ if __name__=='__main__':
 
     g = WebGraph(args.data, filter_ratio=args.filter_ratio)
     v = g.make_personalization_vector(args.personalization_vector_query)
-    pi = g.power_method(v, alpha=args.alpha, max_iterations=args.max_iterations, epsilon=args.epsilon)
+    pi = g.power_method(
+        v, alpha=args.alpha, max_iterations=args.max_iterations, epsilon=args.epsilon)
     g.search(pi, query=args.search_query, max_results=args.max_results)

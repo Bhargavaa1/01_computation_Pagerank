@@ -104,11 +104,17 @@ class WebGraph():
 
         else:
             v = torch.zeros(n)
-            # FIXME: implement Task 2
+            for i in range(n):
+                url = self._index_to_url(i)
+                if url_satisfies_query(url, query):
+                    v[i] = 1
+        print(v)
         
+        # normalizing v
         v_sum = torch.sum(v)
         assert(v_sum>0)
         v /= v_sum
+        print(v)
 
         return v
 
@@ -143,9 +149,16 @@ class WebGraph():
             xprev = x0
             x = xprev.detach().clone()
             for i in range(max_iterations):
+                # x^(k-1) vector processing
                 xprev = x.detach().clone()
-                firstTerm = torch.mul(torch.transpose(torch.matmul(torch.transpose(self.P,0,1),xprev),0,1),alpha)
-                secondTerm = torch.mul(torch.transpose(xprev,0,1),torch.add(torch.mul(torch.matmul(torch.transpose(xprev,0,1), a), alpha),1-alpha))
+                
+                # first part of the sum
+                firstTerm = torch.mul(alpha, torch.transpose(torch.matmul(torch.transpose(self.P,0,1),xprev),0,1))
+
+                # second part of the sum
+                secondTerm = torch.mul(torch.add(torch.mul(alpha,torch.matmul(torch.transpose(xprev,0,1), a)),(1-alpha)),v.t())
+
+                # next iteration of x
                 x = torch.transpose(torch.add(firstTerm,secondTerm),0,1)
 
                 # output debug information

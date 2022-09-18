@@ -580,6 +580,7 @@ but a simple keyword search for corona or related terms would not find these art
    INFO:root:rank=9 pagerank=9.8355e-01 url=www.lawfareblog.com/events
 
    $ python3 pagerank.py --data=data/lawfareblog.csv.gz --verbose --filter_ratio=0.2
+   INFO:root:rank=0 pagerank=4.6096e+00 url=www.lawfareblog.com/trump-asks-supreme-court-stay-congressional-subpeona-tax-returns
    INFO:root:rank=1 pagerank=2.9870e+00 url=www.lawfareblog.com/livestream-nov-21-impeachment-hearings-0
    INFO:root:rank=2 pagerank=2.9672e+00 url=www.lawfareblog.com/opening-statement-david-holmes
    INFO:root:rank=3 pagerank=2.0175e+00 url=www.lawfareblog.com/senate-examines-threats-homeland

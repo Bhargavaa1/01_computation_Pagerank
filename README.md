@@ -10,8 +10,9 @@ This website provides legal analysis on US national security issues.
 **Data:**
 
 The `data` folder contains two files that store example "web graphs".
-The file `small.csv.gz` contains the example graph from the *Deeper Inside Pagerank* paper.
+The file `small.csv.gz` contains the example graph from the _Deeper Inside Pagerank_ paper.
 This is a small graph, so we can manually inspect the contents of this file with the following command:
+
 ```
 $ zcat data/small.csv.gz
 source,target
@@ -38,6 +39,7 @@ The file is assumed to be sorted alphabetically.
 
 The second data file `lawfareblog.csv.gz` contains the link structure for the lawfare blog.
 Let's take a look at the first 10 of these lines:
+
 ```
 $ zcat data/lawfareblog.csv.gz | head
 source,target
@@ -51,37 +53,45 @@ www.lawfareblog.com/,www.lawfareblog.com/topic/book-reviews
 www.lawfareblog.com/,www.lawfareblog.com/documents-related-mueller-investigation
 www.lawfareblog.com/,www.lawfareblog.com/topic/international-law-loac
 ```
+
 You can see that in this file, the node names are URLs.
 Semantically, each line corresponds to an HTML `<a>` tag that is contained in the source webpage and links to the target webpage.
 
 We can use the following command to count the total number of links in the file:
+
 ```
 $ zcat data/lawfareblog.csv.gz | wc -l
 1610789
 ```
+
 Since every link corresponds to a non-zero entry in the `P` matrix,
 this is also the value of `nnz(P)`.
 (Technically, we should subtract 1 from this value since the `wc -l` command also counts the header line, not just the data lines.)
 
 To get the dimensions of `P`, we need to count the total number of nodes in the graph.
 The following command achieves this by: decompressing the file, extracting the first column, removing all duplicate lines, then counting the results.
+
 ```
 $ zcat data/lawfareblog.csv.gz | cut -f1 -d, | uniq | wc -l
 25761
 ```
+
 This matrix is large enough that computing matrix products for dense matrices takes several minutes on a single CPU.
 Fortunately, however, the matrix is very sparse.
 The following python code computes the fraction of entries in the matrix with non-zero values:
+
 ```
 >>> 1610788 / (25760**2)
 0.0024274297384360172
 ```
+
 Thus, by using sparse matrix operations, we will be able to speed up the code significantly.
 
 **Code:**
 
 The `pagerank.py` file contains code for loading the graph CSV files and searching through their nodes for key phrases.
 For example, you can perform a search for all nodes (i.e. urls) that mention the string `corona` with the following command:
+
 ```
 $ python3 pagerank.py --data=data/lawfareblog.csv.gz --verbose --search_query=corona
 ```
@@ -102,6 +112,7 @@ Implement the `WebGraph.power_method` function in `pagerank.py` for computing th
 To check that your implementation is working,
 you should run the program on the `data/small.csv.gz` graph.
 For my implementation, I get the following output.
+
 ```
 $ python3 pagerank.py --data=data/small.csv.gz --verbose
 DEBUG:root:computing indices
@@ -137,6 +148,7 @@ INFO:root:rank=3 pagerank=2.3175e-01 url=2
 INFO:root:rank=4 pagerank=1.8590e-01 url=3
 INFO:root:rank=5 pagerank=1.6917e-01 url=1
 ```
+
 Yours likely won't be identical (due to weird floating point issues), but it should be similar.
 In particular, the ranking of the nodes/urls should be the same order.
 
@@ -229,6 +241,7 @@ but article-webpages are unlikely to appear on a menu and so will only have a sm
 The `--filter_ratio` parameter causes the code to remove all pages that have an in-link ratio larger than the provided value.
 
 Using this option, we can estimate the most important articles on the domain with the following command:
+
 ```
 $ python3 pagerank.py --data=data/lawfareblog.csv.gz --filter_ratio=0.2
 INFO:root:rank=0 pagerank=3.4696e-01 url=www.lawfareblog.com/trump-asks-supreme-court-stay-congressional-subpeona-tax-returns
@@ -242,6 +255,7 @@ INFO:root:rank=7 pagerank=1.4957e-01 url=www.lawfareblog.com/todays-headlines-an
 INFO:root:rank=8 pagerank=1.4367e-01 url=www.lawfareblog.com/cyberlaw-podcast-mistrusting-google
 INFO:root:rank=9 pagerank=1.4240e-01 url=www.lawfareblog.com/lawfare-podcast-bonus-edition-gordon-sondland-vs-committee-no-bull
 ```
+
 Notice that the urls in this list look much more like articles than the urls in the previous list.
 
 When Google calculates their `P` matrix for the web,
@@ -261,12 +275,14 @@ Recall from the reading that the runtime of pagerank depends heavily on the eige
 and that this eigengap is bounded by the alpha parameter.
 
 Run the following four commands:
+
 ```
-$ python3 pagerank.py --data=data/lawfareblog.csv.gz --verbose 
+$ python3 pagerank.py --data=data/lawfareblog.csv.gz --verbose
 $ python3 pagerank.py --data=data/lawfareblog.csv.gz --verbose --alpha=0.99999
 $ python3 pagerank.py --data=data/lawfareblog.csv.gz --verbose --filter_ratio=0.2
 $ python3 pagerank.py --data=data/lawfareblog.csv.gz --verbose --filter_ratio=0.2 --alpha=0.99999
 ```
+
 You should notice that the last command takes considerably more iterations to compute the pagerank vector.
 (My code takes 685 iterations for this call, and about 10 iterations for all the others.)
 
@@ -275,7 +291,8 @@ The answer is that the `P` graph for <https://www.lawfareblog.com> naturally has
 but the modified graph does not have a large eigengap and so requires a small alpha for fast convergence.
 
 Changing the value of alpha also gives us very different pagerank rankings.
-For example, 
+For example,
+
 ```
 $ python3 pagerank_solution.py --data=data/lawfareblog.csv.gz --verbose --filter_ratio=0.2
 INFO:root:rank=0 pagerank=3.4696e-01 url=www.lawfareblog.com/trump-asks-supreme-court-stay-congressional-subpeona-tax-returns
@@ -312,6 +329,7 @@ We'll be exploring this trade-off more formally in class over the rest of the se
 The most interesting applications of pagerank involve the personalization vector.
 Implement the `WebGraph.make_personalization_vector` function so that it outputs a personalization vector tuned for the input query.
 The pseudocode for the function is:
+
 ```
 for each index in the personalization vector:
     get the url for the index (see the _index_to_url function)
@@ -325,6 +343,7 @@ normalize the vector
 The command line argument `--personalization_vector_query` will use the function you created above to augment your search with a custom personalization vector.
 If you've implemented the function correctly,
 you should get results similar to:
+
 ```
 $ python3 pagerank.py --data=data/lawfareblog.csv.gz --filter_ratio=0.2 --personalization_vector_query='corona'
 INFO:root:rank=0 pagerank=6.3127e-01 url=www.lawfareblog.com/covid-19-speech-and-surveillance-response
@@ -340,6 +359,7 @@ INFO:root:rank=9 pagerank=7.2888e-02 url=www.lawfareblog.com/house-oversight-com
 ```
 
 Notice that these results are significantly different than when using the `--search_query` option:
+
 ```
 $ python3 pagerank.py --data=data/lawfareblog.csv.gz --filter_ratio=0.2 --search_query='corona'
 INFO:root:rank=0 pagerank=8.1320e-03 url=www.lawfareblog.com/house-oversight-committee-holds-day-two-hearing-government-coronavirus-response
@@ -374,6 +394,7 @@ This can be used to map out what types of topics are similar to the coronavirus.
 
 For example, the following query ranks all webpages by their `corona` importance,
 but removes webpages mentioning `corona` from the results.
+
 ```
 $ python3 pagerank.py --data=data/lawfareblog.csv.gz --filter_ratio=0.2 --personalization_vector_query='corona' --search_query='-corona'
 INFO:root:rank=0 pagerank=6.3127e-01 url=www.lawfareblog.com/covid-19-speech-and-surveillance-response
@@ -387,6 +408,7 @@ INFO:root:rank=7 pagerank=5.9492e-02 url=www.lawfareblog.com/chinatalk-dispatche
 INFO:root:rank=8 pagerank=5.1245e-02 url=www.lawfareblog.com/us-moves-dismiss-case-against-company-linked-ira-troll-farm
 INFO:root:rank=9 pagerank=5.1245e-02 url=www.lawfareblog.com/livestream-house-armed-services-holds-hearing-national-security-challenges-north-and-south-america
 ```
+
 You can see that there are many urls about concepts that are obviously related like "covid", "clinical trials", and "quarantine",
 but this algorithm also finds articles about Chinese propaganda and Trump's policy decisions.
 Both of these articles are highly relevant to coronavirus discussions,
@@ -397,8 +419,9 @@ but a simple keyword search for corona or related terms would not find these art
 1. Create a new repo on github (not a fork of this repo).
 
 1. Run the following commands, and paste their output into the code blocks below.
-   
+
    Task 1, part 1:
+
    ```
    $ python3 pagerank.py --data=data/small.csv.gz --verbose
    DEBUG:root:computing indices
@@ -488,6 +511,7 @@ but a simple keyword search for corona or related terms would not find these art
    ```
 
    Task 1, part 2:
+
    ```
    $ python3 pagerank.py --data=data/lawfareblog.csv.gz --search_query='corona'
    INFO:root:rank=0 pagerank=4.5865e-03 url=www.lawfareblog.com/lawfare-podcast-united-nations-and-coronavirus-crisis
@@ -527,6 +551,7 @@ but a simple keyword search for corona or related terms would not find these art
    ```
 
    Task 1, part 3:
+
    ```
    $ python3 pagerank.py --data=data/lawfareblog.csv.gz
    INFO:root:rank=0 pagerank=8.4193e+00 url=www.lawfareblog.com/litigation-documents-related-appointment-matthew-whitaker-acting-attorney-general
@@ -554,6 +579,7 @@ but a simple keyword search for corona or related terms would not find these art
    ```
 
    Task 1, part 4:
+
    ```
    $ python3 pagerank.py --data=data/lawfareblog.csv.gz --verbose
    INFO:root:rank=0 pagerank=8.4193e+00 url=www.lawfareblog.com/litigation-documents-related-appointment-matthew-whitaker-acting-attorney-general
@@ -605,6 +631,7 @@ but a simple keyword search for corona or related terms would not find these art
    ```
 
    Task 2, part 1:
+
    ```
    $ python3 pagerank.py --data=data/lawfareblog.csv.gz --filter_ratio=0.2 --personalization_vector_query='corona'
    INFO:root:rank=0 pagerank=8.8870e-01 url=www.lawfareblog.com/covid-19-speech-and-surveillance-response
@@ -620,6 +647,7 @@ but a simple keyword search for corona or related terms would not find these art
    ```
 
    Task 2, part 2:
+
    ```
    $ python3 pagerank.py --data=data/lawfareblog.csv.gz --filter_ratio=0.2 --personalization_vector_query='corona' --search_query='-corona'
    INFO:root:rank=0 pagerank=8.8870e-01 url=www.lawfareblog.com/covid-19-speech-and-surveillance-response
@@ -640,7 +668,7 @@ but a simple keyword search for corona or related terms would not find these art
    (You made trade stars with other students in the class.)
 
    > **NOTE:**
-   > 
+   >
    > Recruiters use github profiles to determine who to hire,
    > and pagerank is used to rank user profiles and projects.
    > Links in this graph correspond to who has starred/followed who's repo.

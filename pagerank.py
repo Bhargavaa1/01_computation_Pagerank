@@ -166,7 +166,6 @@ class WebGraph():
                 # early stop when sufficient accuracy reached
                 if residual < epsilon:
                     break
-
             return x.squeeze()
 
 
